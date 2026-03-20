@@ -190,4 +190,4 @@ startBtn.onclick = ()=>{
     document.getElementById('msg').innerText = '';
     updateUI();
 };
-document.body.prepend(startBtn);
+document.querySelector('.game').prepend(startBtn);
