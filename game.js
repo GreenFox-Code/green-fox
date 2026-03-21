@@ -11,21 +11,21 @@ const ctx = canvas.getContext('2d');
 
 // MAP
 const map = [
-[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,1],
-[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,1,0,1],
-[1,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,1],
-[1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1,0,1],
-[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,1],
-[1,1,1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,0,1],
-[1,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1],
-[1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
-[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,1],
-[1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,0,1],
-[1,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,1,0,1],
-[1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
-[1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
-[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,1],
+  [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,1,0,1],
+  [1,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,1],
+  [1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1,0,1],
+  [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,1],
+  [1,1,1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,0,1],
+  [1,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1],
+  [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
+  [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,1],
+  [1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,0,1],
+  [1,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,1,0,1],
+  [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
+  [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
 ];
 
 const ROWS = map.length;
@@ -97,15 +97,11 @@ function moveHunters(){
         if (h.type === 'chaser') {
             target = {x: fox.x, y: fox.y};
         } else if (h.type === 'ambush') {
-            target = {
-                x: fox.x + fox.dx * 2,
-                y: fox.y + fox.dy * 2
-            };
+            target = { x: fox.x + fox.dx*2, y: fox.y + fox.dy*2 };
         } else {
-            if (Math.random() < 0.5) {
+            if (Math.random() < 0.5){
                 let r = options[Math.floor(Math.random()*options.length)];
-                h.x = r.x;
-                h.y = r.y;
+                h.x = r.x; h.y = r.y;
                 return;
             }
             target = {x: fox.x, y: fox.y};
@@ -138,34 +134,24 @@ function check(){
 // END
 function end(win){
     running = false;
+    let duration = (Date.now() - startTime)/1000;
 
-    let duration = (Date.now() - startTime) / 1000;
+    // Отправка администратору в любом случае
+    if(tg){
+        tg.sendData(JSON.stringify({
+            reached_den: win,
+            time: duration
+        }));
+    }
 
     if(win){
         finished = true;
         bestTime = duration;
-
         document.getElementById('msg').innerText = '🎉 ПОБЕДА!';
-
-        if(tg){
-            tg.sendData(JSON.stringify({
-                reached_den: true,
-                time: duration
-            }));
-        }
-
         startBtn.disabled = true;
     } else {
         document.getElementById('msg').innerText = '💀 ПОЙМАН!';
-
         if(attempt >= maxAttempts){
-            if(tg){
-                tg.sendData(JSON.stringify({
-                    reached_den: false,
-                    time: duration
-                }));
-            }
-
             startBtn.disabled = true;
             document.getElementById('msg').innerText += ' 🛑 Попытки закончились';
         }
