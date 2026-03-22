@@ -1,5 +1,4 @@
 // game.js
-// Обязательно подключите telegram-web-app.js в HTML
 
 const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
 if (tg) {
@@ -14,11 +13,11 @@ header.style.fontWeight = 'bold';
 header.style.marginBottom = '10px';
 document.querySelector('.game').prepend(header);
 
-// ROLE
+// ROLE из параметров URL
 const role = new URLSearchParams(window.location.search).get('role') || 'beta';
 document.getElementById('role').innerText = role;
 
-// FOX_NUMBER (берём из DOM, если есть)
+// FOX_NUMBER, если захотите подставлять его с сервера в HTML
 window.fox_number = document.getElementById('fox_number')?.innerText || "UNKNOWN";
 
 // CANVAS
@@ -142,7 +141,6 @@ function end(win) {
     running = false;
     const duration = (Date.now() - startTime) / 1000;
 
-    // Всегда отправляем JSON боту, если WebApp доступен
     if (tg) {
         const payload = {
             reached_den: win,
@@ -150,14 +148,14 @@ function end(win) {
             fox_number: window.fox_number,
             role: role
         };
+        console.log("DEBUG: before tg.sendData", payload);
         try {
             tg.sendData(JSON.stringify(payload));
-            console.log("DEBUG: tg.sendData отправлен", payload);
         } catch (e) {
-            console.error("ERROR: tg.sendData не сработал", e);
+            console.error("ERROR: tg.sendData", e);
         }
     } else {
-        console.warn("tg не определён, данные не отправлены");
+        console.log("DEBUG: tg is null, not in Telegram WebApp?");
     }
 
     finished = win || (!win && attempt >= maxAttempts);
@@ -172,9 +170,6 @@ function end(win) {
     ['up', 'down', 'left', 'right'].forEach(id => {
         document.getElementById(id).disabled = finished;
     });
-
-    // По-хорошему можно ещё закрыть WebApp после окончания
-    // if (tg) tg.close();
 }
 
 // DRAW
