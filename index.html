@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🦊 Fox Run</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦊 Fox Run</title>
 
-<link rel="stylesheet" href="style.css">
+    <!-- ВАЖНО: Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
@@ -18,14 +21,17 @@
         <div>⭐ <span id="score">0</span></div>
     </div>
 
+    <!-- Если хотите отображать номер лисы на экране -->
+    <div id="fox_number" style="display:none">UNKNOWN</div>
+
     <canvas id="canvas" width="450" height="450"></canvas>
 
     <div class="controls">
-        <button id="up">▲</button>
+        <button id="up" disabled>▲</button>
         <div>
-            <button id="left">◀</button>
-            <button id="down">▼</button>
-            <button id="right">▶</button>
+            <button id="left" disabled>◀</button>
+            <button id="down" disabled>▼</button>
+            <button id="right" disabled>▶</button>
         </div>
     </div>
 
@@ -34,6 +40,5 @@
 </div>
 
 <script src="game.js"></script>
-
 </body>
 </html>
