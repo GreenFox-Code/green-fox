@@ -15,8 +15,8 @@ let role = new URLSearchParams(window.location.search).get('role') || 'beta';
 function showFoxNumberInput() {
     const gameDiv = document.querySelector('.game');
     gameDiv.innerHTML = `
-        <div style="font-size:24px; margin-bottom:20px;">🦊 GREEN FOX</div>
-        <div style="font-size:18px; margin-bottom:20px; color:#0f0;">Ваша роль: <strong>${role.toUpperCase()}</strong></div>
+        <div style="font-size:24px; margin-bottom:20px;">GREEN FOX</div>
+        <div style="font-size:18px; margin-bottom:20px; color:#0f0;">Ваша роль: <strong>${role.toUpperCase()}.</strong></div>
         <div style="margin-bottom:15px;">Введите номер лисы:</div>
         <input type="number" id="foxInput" placeholder="123" style="
             width:200px; padding:12px; font-size:18px; 
@@ -30,7 +30,7 @@ function showFoxNumberInput() {
                 padding:15px 30px; font-size:20px; 
                 border-radius:15px; font-weight:bold;
                 cursor:pointer;
-            ">🚀 НАЧАТЬ ИГРУ</button>
+            ">НАЧАТЬ ИГРУ</button>
         </div>
         <div id="errorMsg" style="color:#f00; margin-top:10px; display:none;"></div>
     `;
