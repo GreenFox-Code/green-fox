@@ -124,16 +124,24 @@
             font-size: 18px;
             backdrop-filter: blur(4px);
         }
-        .badge {
-            background: #1e3a1e;
-            border-radius: 40px;
-            padding: 4px 14px;
-        }
         .error-text { color: #ff8866; font-weight: bold; margin-top: 10px; }
         footer {
             font-size: 10px;
             margin-top: 16px;
             opacity: 0.7;
+        }
+        .saving-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #0f0;
+            color: #000;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: none;
+            z-index: 1000;
+            font-weight: bold;
         }
         @media (max-width: 500px) {
             button { padding: 10px 18px; }
@@ -166,13 +174,19 @@
     <button id="startBtn" style="display:none;">🔥 НАЧАТЬ ПОХОД</button>
     <footer>🕹️ 6 секретных путей · остерегайся ловушек · в конце карта откроется</footer>
 </div>
+<div id="savingIndicator" class="saving-indicator">📊 Сохранение...</div>
 
 <script type="text/python">
-from browser import document, timer, window, alert
-import json, random, math
+from browser import document, timer, window, alert, ajax
+import json
 from javascript import Date
 
-# ---------- ГЛОБАЛЬНЫЕ КОНСТАНТЫ ----------
+# ========== НАСТРОЙКА GOOGLE SHEETS ==========
+# ⚠️ ВАЖНО: Замените на ваш URL от Google Apps Script!
+# Как получить URL написано в инструкции ниже
+GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbyyiVjo-_qnopSoJOuBlYGcHz_NK183BsfMyIFHO5LytGbp7_3HuC2OPjs7Bkm_l3S3/exec"
+
+# ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
 CELL_SIZE = 20
 ROWS, COLS = 20, 20
 canvas = document["canvas"]
@@ -186,22 +200,11 @@ finished = False
 max_attempts = 3
 attempt = 0
 window_fox_number = ""
-VISITED_PATH = set()   # для отображения пройденных клеток + финальная карта
+VISITED_PATH = set()
+game_start_time = None  # время начала всей игры (для фиксации в таблице)
 
-# Координаты выхода (финиш)
-EXIT_X, EXIT_Y = 10, 11   # выход в клетке (10,11) по лабиринту
-
-# ===== 6 ПРАВИЛЬНЫХ МАРШРУТОВ (каждый ведёт к выходу, минуя ловушки) =====
-RIGHT_PATHS = [
-    [(1,18),(2,18),(3,18),(4,18),(5,18),(6,18),(7,18),(8,18),(9,18),(10,18),(10,17),(10,16),(10,15),(10,14),(10,13),(10,12),(10,11)],  # маршрут 1: главная артерия
-    [(1,18),(2,18),(2,17),(3,17),(4,17),(4,16),(5,16),(6,16),(7,16),(8,16),(9,16),(10,16),(10,15),(10,14),(10,13),(10,12),(10,11)],  # маршрут 2: зигзаг
-    [(1,18),(1,17),(2,17),(3,17),(4,17),(5,17),(6,17),(7,17),(8,17),(9,17),(10,17),(10,16),(10,15),(10,14),(10,13),(10,12),(10,11)],  # маршрут 3: верхний обход
-    [(1,18),(2,18),(3,18),(4,18),(5,18),(6,17),(7,17),(8,17),(9,17),(10,17),(9,16),(10,16),(10,15),(10,14),(10,13),(10,12),(10,11)],  # маршрут 4: горка
-    [(1,18),(2,17),(3,16),(4,15),(5,14),(6,13),(7,12),(8,11),(9,10),(10,9),(11,9),(12,10),(13,11),(12,11),(11,11),(10,11)],          # маршрут 5: серпантин
-    [(1,18),(2,18),(3,18),(4,17),(5,16),(6,15),(7,14),(8,13),(9,12),(10,11)]   # маршрут 6: короткий вираж
-]
-
-# БОЛЬШОЙ ЛАБИРИНТ 20x20: 0 - проход, 1 - стена, 2 - ружьё, 3 - капкан, 4 - медведь, 5 - выход
+# Координаты выхода
+EXIT_X, EXIT_Y = 10, 11
 MAP = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,1],
@@ -224,18 +227,76 @@ MAP = [
     [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ]
-# Устанавливаем явно выход в нужной позиции (5)
 MAP[EXIT_Y][EXIT_X] = 5
-
-# добавим несколько ловушек в опасные зоны (для разнообразия)
-MAP[2][2] = 2   # ружьё
-MAP[6][2] = 3   # капкан
-MAP[2][8] = 4   # медведь
+MAP[2][2] = 2
+MAP[6][2] = 3
+MAP[2][8] = 4
 MAP[14][16] = 3
 MAP[9][18] = 2
 MAP[11][2] = 4
 
-# ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
+# 6 правильных маршрутов
+RIGHT_PATHS = [
+    [(1,18),(2,18),(3,18),(4,18),(5,18),(6,18),(7,18),(8,18),(9,18),(10,18),(10,17),(10,16),(10,15),(10,14),(10,13),(10,12),(10,11)],
+    [(1,18),(2,18),(2,17),(3,17),(4,17),(4,16),(5,16),(6,16),(7,16),(8,16),(9,16),(10,16),(10,15),(10,14),(10,13),(10,12),(10,11)],
+    [(1,18),(1,17),(2,17),(3,17),(4,17),(5,17),(6,17),(7,17),(8,17),(9,17),(10,17),(10,16),(10,15),(10,14),(10,13),(10,12),(10,11)],
+    [(1,18),(2,18),(3,18),(4,18),(5,18),(6,17),(7,17),(8,17),(9,17),(10,17),(9,16),(10,16),(10,15),(10,14),(10,13),(10,12),(10,11)],
+    [(1,18),(2,17),(3,16),(4,15),(5,14),(6,13),(7,12),(8,11),(9,10),(10,9),(11,9),(12,10),(13,11),(12,11),(11,11),(10,11)],
+    [(1,18),(2,18),(3,18),(4,17),(5,16),(6,15),(7,14),(8,13),(9,12),(10,11)]
+]
+
+# ========== ФУНКЦИЯ ОТПРАВКИ В GOOGLE SHEETS ==========
+def save_to_google_sheets(fox_number, attempts_used, result, duration_seconds):
+    """Отправляет данные в Google Sheets"""
+    def on_complete(req):
+        indicator = document["savingIndicator"]
+        if req.status == 200:
+            indicator.text = "✅ Сохранено!"
+            indicator.style.background = "#0f0"
+            indicator.style.color = "#000"
+        else:
+            indicator.text = "❌ Ошибка"
+            indicator.style.background = "#f00"
+            indicator.style.color = "#fff"
+        timer.set_timeout(lambda: indicator.style.display = "none", 2000)
+    
+    def on_error(req):
+        indicator = document["savingIndicator"]
+        indicator.text = "❌ Ошибка сети"
+        indicator.style.background = "#f00"
+        timer.set_timeout(lambda: indicator.style.display = "none", 2000)
+    
+    # Показываем индикатор
+    indicator = document["savingIndicator"]
+    indicator.text = "📤 Сохранение..."
+    indicator.style.display = "block"
+    indicator.style.background = "#ff0"
+    indicator.style.color = "#000"
+    
+    # Формируем данные
+    current_time = Date.now()
+    date_str = Date(current_time).toLocaleString()
+    
+    data = {
+        "foxNumber": fox_number,
+        "attempts": attempts_used,
+        "result": result,
+        "duration": round(duration_seconds, 1),
+        "timestamp": date_str,
+        "route": route_id
+    }
+    
+    # Отправляем POST запрос
+    req = ajax.ajax()
+    req.open('POST', GOOGLE_SHEETS_URL, True)
+    req.set_header('Content-Type', 'application/json')
+    req.bind('complete', on_complete)
+    req.bind('error', on_error)
+    req.send(json.dumps(data))
+    
+    print(f"📊 Отправлено в Google Sheets: {data}")
+
+# ========== ОСТАЛЬНЫЕ ФУНКЦИИ ИГРЫ ==========
 def can_move(x, y):
     if 0 <= x < COLS and 0 <= y < ROWS:
         tile = MAP[y][x]
@@ -254,7 +315,6 @@ def reset_game_state():
     finished = False
     running = False
     VISITED_PATH.clear()
-    # добавим стартовую клетку в посещённые
     VISITED_PATH.add((fox["x"], fox["y"]))
 
 def update_ui():
@@ -262,38 +322,28 @@ def update_ui():
     document["routeId"].text = route_id
     document["attemptCount"].text = f"{attempt}/{max_attempts}"
 
-def save_to_sheets(fox_num, route, win, steps, duration, attempt_num):
-    # Имитация отправки в Google Sheets (можно заменить на реальный fetch)
-    # Для демонстрации просто логируем в консоль
-    result = "WIN" if win else "LOSE"
-    print(f"[SHEETS] fox:{fox_num} route:{route} result:{result} steps:{steps} time:{duration:.1f}s attempt:{attempt_num}")
-    # реальный fetch при желании:
-    # fetch("https://script.google.com/macros/s/...", {method:"POST", body:...})
-
 def end_game(win, custom_msg=""):
-    global running, finished, start_time, VISITED_PATH
+    global running, finished, start_time, VISITED_PATH, game_start_time, attempt
     running = False
     finished = True
     duration = (Date.now() - start_time) / 1000 if start_time else 0
     
-    # Сохраняем результат
-    save_to_sheets(window_fox_number, route_id, win, score, duration, attempt)
+    # Сохраняем в Google Sheets (только номер, время и попытки)
+    result_text = "win" if win else "lose"
+    save_to_google_sheets(window_fox_number, attempt, result_text, duration)
     
-    # ===== ОТКРЫВАЕМ КАРТУ В ЗАВИСИМОСТИ ОТ ИСХОДА =====
+    # Открываем карту
     if win:
-        # ПОБЕДА: показываем правильный маршрут игрока + выход
         current_path = RIGHT_PATHS[route_id - 1]
         for (px, py) in current_path:
             VISITED_PATH.add((px, py))
         VISITED_PATH.add((EXIT_X, EXIT_Y))
         msg_text = f"🎉 ПОБЕДА! Выход найден! 🕳️\n🏆 Шагов: {score} | ⏱️ {duration:.1f} сек\n✅ Твой маршрут #{route_id} — верный! Карта открыта."
     else:
-        # ПРОИГРЫШ: показываем ВСЕ правильные маршруты + ловушки + выход
         for path in RIGHT_PATHS:
             for (px, py) in path:
                 VISITED_PATH.add((px, py))
         VISITED_PATH.add((EXIT_X, EXIT_Y))
-        # Также добавим все опасные клетки (где ловушки) для наглядности
         for y in range(ROWS):
             for x in range(COLS):
                 if MAP[y][x] in [2,3,4]:
@@ -301,8 +351,7 @@ def end_game(win, custom_msg=""):
         msg_text = f"{custom_msg or '💀 ПРОИГРЫШ!'}\n📉 {score} шагов, {duration:.1f}с\n🗺️ Вся карта раскрыта: видно 6 путей и ловушки!"
     
     document["msg"].innerHTML = msg_text.replace("\n", "<br>")
-    finished = True
-    draw()   # финальная отрисовка с полной картой
+    draw()
 
 def move_fox(dx, dy):
     global score
@@ -315,22 +364,14 @@ def move_fox(dx, dy):
         score += 1
         VISITED_PATH.add((nx, ny))
         update_ui()
-        # проверка выхода после хода
         if get_tile(nx, ny) == 5:
             end_game(True)
     elif tile in [2,3,4]:
-        # ловушка
         trap_msg = {2: "💥 РУЖЬЁ! Лиса подстрелена...", 3: "🪤 КАПКАН! Лиса в ловушке!", 4: "🐻 МЕДВЕДЬ! Нападение..."}.get(tile, "❌ Ловушка")
         end_game(False, f"☠️ {trap_msg} Игра окончена.")
-    # если стена - просто игнорируем
-
-def check_win():
-    if get_tile(fox["x"], fox["y"]) == 5:
-        end_game(True)
 
 def draw():
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    # 1. Фон + стены
     for y in range(ROWS):
         for x in range(COLS):
             if MAP[y][x] == 1:
@@ -342,14 +383,12 @@ def draw():
                 ctx.fillStyle = "#021902"
                 ctx.fillRect(x*CELL_SIZE, y*CELL_SIZE, CELL_SIZE, CELL_SIZE)
     
-    # 2. отображаем посещённые/открытые клетки (финальная карта или подсветка)
     if finished or running:
         for (px, py) in VISITED_PATH:
             if 0 <= px < COLS and 0 <= py < ROWS:
                 ctx.fillStyle = "#2f9f2faa"
                 ctx.fillRect(px*CELL_SIZE+2, py*CELL_SIZE+2, CELL_SIZE-4, CELL_SIZE-4)
     
-    # 3. Ловушки и объекты (поверх)
     ctx.font = f"{int(CELL_SIZE*0.8)}px 'Segoe UI Emoji'"
     ctx.textAlign = "center"
     ctx.textBaseline = "middle"
@@ -365,7 +404,6 @@ def draw():
                 ctx.fillStyle = "#ffcc88"
                 ctx.fillText(icon, (x+0.5)*CELL_SIZE, (y+0.5)*CELL_SIZE)
     
-    # 4. Лиса (всегда)
     ctx.font = f"{int(CELL_SIZE*1.2)}px 'Segoe UI Emoji'"
     ctx.fillStyle = "#ffaa44"
     ctx.fillText("🦊", (fox["x"]+0.5)*CELL_SIZE, (fox["y"]+0.5)*CELL_SIZE)
@@ -373,17 +411,16 @@ def draw():
     ctx.lineWidth = 2.5
     ctx.strokeRect(fox["x"]*CELL_SIZE+1, fox["y"]*CELL_SIZE+1, CELL_SIZE-2, CELL_SIZE-2)
     
-    # 5. Дополнительно показываем правильные маршруты при проигрыше (если закончили)
     if finished and not (get_tile(fox["x"], fox["y"]) == 5):
-        # подсветим все безопасные пути полупрозрачным
-        for idx, path in enumerate(RIGHT_PATHS):
+        for path in RIGHT_PATHS:
             for (px, py) in path:
                 ctx.fillStyle = "#88ff8844"
                 ctx.fillRect(px*CELL_SIZE+4, py*CELL_SIZE+4, CELL_SIZE-8, CELL_SIZE-8)
 
 def game_loop(_):
     if running and not finished:
-        check_win()
+        if get_tile(fox["x"], fox["y"]) == 5:
+            end_game(True)
     draw()
 
 def start_game(ev):
@@ -412,7 +449,6 @@ def init_game_after_code():
     document["msg"].innerHTML = f"🗝️ Твой секретный маршрут: #{route_id}. Нажми СТАРТ и двигайся по лабиринту."
     draw()
 
-# ===== ВВОД НОМЕРА ЛИСЫ =====
 def start_input():
     document["inputDiv"].innerHTML = """
         <div class="input-panel">
@@ -428,13 +464,13 @@ def start_input():
             document["errorMsg"].text = "❌ Введите число от 1 до 4 цифр!"
             document["errorMsg"].style.display = "block"
             return
-        global route_id, window_fox_number, attempt, finished
+        global route_id, window_fox_number, attempt, finished, game_start_time
         window_fox_number = fox_num
-        # определяем маршрут по последней цифре
         last_digit = int(fox_num[-1])
         route_id = (last_digit % 6) + 1 if last_digit != 0 else 1
         attempt = 0
         finished = False
+        game_start_time = Date.now()
         reset_game_state()
         document["info"].style.display = "block"
         document["startBtn"].style.display = "inline-block"
@@ -442,7 +478,6 @@ def start_input():
         init_game_after_code()
     document["confirmBtn"].bind("click", on_confirm)
 
-# ===== ПРИВЯЗКА КНОПОК И ЖЕСТОВ =====
 def bind_controls():
     document["startBtn"].bind("click", start_game)
     document["up"].bind("click", lambda ev: move_fox(0, -1))
@@ -450,7 +485,6 @@ def bind_controls():
     document["left"].bind("click", lambda ev: move_fox(-1, 0))
     document["right"].bind("click", lambda ev: move_fox(1, 0))
     
-    # Свайп для мобильных
     def touch_handler(ev):
         ev.preventDefault()
         if not running or finished: return
@@ -472,7 +506,6 @@ def bind_controls():
     canvas.bind("touchmove", lambda e: e.preventDefault())
     canvas.bind("touchend", touch_handler)
 
-# ===== ЗАПУСК =====
 start_input()
 bind_controls()
 timer.set_interval(game_loop, 80)
