@@ -8,6 +8,12 @@ if (tg) {
 // ТВОЙ Google Sheet URL (готов!)
 const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbwECgEU1gmPtV0Rkf9ebfpskEXx7lC9tVmwdu9OcJHClwCvN6NoQ1xgjlFNfH1ISA7w/exec';
 
+// РУЧНОЙ ВВОД НОМЕРА ЛИСЫ (временно)
+if (!window.fox_number || window.fox_number === "UNKNOWN") {
+    const foxNum = prompt("Введите номер игрока:");
+    window.fox_number = foxNum ? foxNum : "UNKNOWN";
+}
+
 // --- Индикатор версии ---
 const header = document.createElement('div');
 header.innerText = 'Green Fox';
