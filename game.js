@@ -8,6 +8,13 @@ if (tg) {
 // ТВОЙ Google Sheet URL (готов!)
 const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbwECgEU1gmPtV0Rkf9ebfpskEXx7lC9tVmwdu9OcJHClwCvN6NoQ1xgjlFNfH1ISA7w/exec';
 
+// ФИКС НОМЕРА ЛИСЫ
+if (!window.fox_number || window.fox_number === "UNKNOWN") {
+    const foxNum = prompt("🎮 Введите ваш номер лисы:");
+    window.fox_number = foxNum || "GUEST";
+    document.getElementById('role').innerText += ` #${window.fox_number}`;
+}
+
 // --- Индикатор версии ---
 const header = document.createElement('div');
 header.innerText = 'Green Fox';
