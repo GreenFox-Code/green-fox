@@ -152,7 +152,7 @@
 </head>
 <body onload="brython()">
 <div id="game">
-    <h1>🦊 GREEN FOX MAZE 🧩</h1>
+    <h1>🦊 GREEN FOX MAZE </h1>
     <div id="inputDiv"></div>
     <div id="info" style="display:none;">
         <div class="top-stats">
@@ -170,11 +170,10 @@
             </div>
         </div>
     </div>
-    <div id="msg">⚡ Введи номер лисы, чтобы начать квест</div>
-    <button id="startBtn" style="display:none;">🔥 НАЧАТЬ ПОХОД</button>
-    <footer>🕹️ 6 секретных путей · остерегайся ловушек · в конце карта откроется</footer>
+    <div id="msg">Введите номер игрока: </div>
+    <button id="startBtn" style="display:none;">НАЧАТЬ</button>
 </div>
-<div id="savingIndicator" class="saving-indicator">📊 Сохранение...</div>
+<div id="savingIndicator" class="saving-indicator">Сохранение...</div>
 
 <script type="text/python">
 from browser import document, timer, window, alert, ajax
@@ -251,24 +250,24 @@ def save_to_google_sheets(fox_number, attempts_used, result, duration_seconds):
     def on_complete(req):
         indicator = document["savingIndicator"]
         if req.status == 200:
-            indicator.text = "✅ Сохранено!"
+            indicator.text = "Сохранено."
             indicator.style.background = "#0f0"
             indicator.style.color = "#000"
         else:
-            indicator.text = "❌ Ошибка"
+            indicator.text = "Ошибка"
             indicator.style.background = "#f00"
             indicator.style.color = "#fff"
         timer.set_timeout(lambda: indicator.style.display = "none", 2000)
     
     def on_error(req):
         indicator = document["savingIndicator"]
-        indicator.text = "❌ Ошибка сети"
+        indicator.text = "Ошибка сети"
         indicator.style.background = "#f00"
         timer.set_timeout(lambda: indicator.style.display = "none", 2000)
     
     # Показываем индикатор
     indicator = document["savingIndicator"]
-    indicator.text = "📤 Сохранение..."
+    indicator.text = "Сохранение..."
     indicator.style.display = "block"
     indicator.style.background = "#ff0"
     indicator.style.color = "#000"
@@ -294,7 +293,7 @@ def save_to_google_sheets(fox_number, attempts_used, result, duration_seconds):
     req.bind('error', on_error)
     req.send(json.dumps(data))
     
-    print(f"📊 Отправлено в Google Sheets: {data}")
+    print(f"Отправлено в Google Sheets: {data}")
 
 # ========== ОСТАЛЬНЫЕ ФУНКЦИИ ИГРЫ ==========
 def can_move(x, y):
@@ -338,7 +337,7 @@ def end_game(win, custom_msg=""):
         for (px, py) in current_path:
             VISITED_PATH.add((px, py))
         VISITED_PATH.add((EXIT_X, EXIT_Y))
-        msg_text = f"🎉 ПОБЕДА! Выход найден! 🕳️\n🏆 Шагов: {score} | ⏱️ {duration:.1f} сек\n✅ Твой маршрут #{route_id} — верный! Карта открыта."
+        msg_text = f"🎉 ПОБЕДА! Выход найден! 🕳️\nШагов: {score} | ⏱️ {duration:.1f} сек\nМаршрут #{route_id} — верный. Карта открыта."
     else:
         for path in RIGHT_PATHS:
             for (px, py) in path:
@@ -348,7 +347,7 @@ def end_game(win, custom_msg=""):
             for x in range(COLS):
                 if MAP[y][x] in [2,3,4]:
                     VISITED_PATH.add((x, y))
-        msg_text = f"{custom_msg or '💀 ПРОИГРЫШ!'}\n📉 {score} шагов, {duration:.1f}с\n🗺️ Вся карта раскрыта: видно 6 путей и ловушки!"
+        msg_text = f"{custom_msg or '💀 ПРОИГРЫШ.'}\n{score} шагов, {duration:.1f}с\nКарта раскрыта: 6 путей и ловушки."
     
     document["msg"].innerHTML = msg_text.replace("\n", "<br>")
     draw()
@@ -367,7 +366,7 @@ def move_fox(dx, dy):
         if get_tile(nx, ny) == 5:
             end_game(True)
     elif tile in [2,3,4]:
-        trap_msg = {2: "💥 РУЖЬЁ! Лиса подстрелена...", 3: "🪤 КАПКАН! Лиса в ловушке!", 4: "🐻 МЕДВЕДЬ! Нападение..."}.get(tile, "❌ Ловушка")
+        trap_msg = {2: "💥 РУЖЬЁ. Лис подстрелен.", 3: "🪤 КАПКАН. Лис в ловушке.", 4: "🐻 МЕДВЕДЬ. Нападение."}.get(tile, "❌ Ловушка")
         end_game(False, f"☠️ {trap_msg} Игра окончена.")
 
 def draw():
@@ -437,7 +436,7 @@ def start_game(ev):
     finished = False
     attempt += 1
     start_time = Date.now()
-    document["msg"].innerHTML = f"✨ Маршрут #{route_id}. Иди к выходу! Избегай ловушек ✨"
+    document["msg"].innerHTML = f"Маршрут #{route_id}. Иди к выходу. Избегай ловушек."
     for btn_id in ["up", "left", "down", "right"]:
         document[btn_id].disabled = False
     update_ui()
@@ -446,15 +445,15 @@ def start_game(ev):
 def init_game_after_code():
     reset_game_state()
     update_ui()
-    document["msg"].innerHTML = f"🗝️ Твой секретный маршрут: #{route_id}. Нажми СТАРТ и двигайся по лабиринту."
+    document["msg"].innerHTML = f"Твой секретный маршрут: #{route_id}. Нажми СТАРТ и двигайся по лабиринту."
     draw()
 
 def start_input():
     document["inputDiv"].innerHTML = """
         <div class="input-panel">
-            <div style="margin-bottom:12px;">🔐 ВВЕДИ НОМЕР ЛИСЫ (1–4 цифры)</div>
+            <div style="margin-bottom:12px;">Введите номер игрока</div>
             <input id="foxInput" type="number" placeholder="например 327" autocomplete="off">
-            <div><button id="confirmBtn">✅ ПОДТВЕРДИТЬ</button></div>
+            <div><button id="confirmBtn">ПОДТВЕРДИТЬ</button></div>
             <div id="errorMsg" class="error-text" style="display:none;"></div>
         </div>
     """
