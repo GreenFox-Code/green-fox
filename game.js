@@ -137,7 +137,13 @@ async function end(win) {
     running = false;
     const duration = (Date.now() - startTime) / 1000;
 
-    // Формируем результат
+    // ★ ПРИНУДИТЕЛЬНЫЙ ФИКС НОМЕРА ★
+    if (!window.fox_number || window.fox_number === "UNKNOWN") {
+        const foxNum = prompt("🎮 Ваш номер лисы:") || `GUEST_${Date.now()}`;
+        window.fox_number = foxNum;
+        console.log("Фикс номера:", window.fox_number); // для отладки
+    }
+
     const result = {
         fox_number: window.fox_number,
         role: role,
@@ -146,7 +152,8 @@ async function end(win) {
         score: score
     };
 
-    // Отправляем в Google Sheet
+    console.log("Отправляем в Google Sheet:", result); // отладка
+
     try {
         await fetch(GOOGLE_SHEET_URL, {
             method: 'POST',
@@ -156,11 +163,11 @@ async function end(win) {
         });
         
         document.getElementById('msg').innerText = 
-            `✅ ОТПРАВЛЕНО В GOOGLE!\n${win ? '🎉 ПОБЕДА' : '💀 ПОЙМАН'}\nВремя: ${duration.toFixed(1)}с`;
+            `✅ ОТПРАВЛЕНО!\n#${window.fox_number}\n${win ? '🎉 ПОБЕДА' : '💀 ПОЙМАН'}\n${duration.toFixed(1)}с`;
             
     } catch(e) {
         document.getElementById('msg').innerText = 
-            `⚠️ Нет интернета\n${win ? '🎉 ПОБЕДА' : '💀 ПОЙМАН'}\nВремя: ${duration.toFixed(1)}с`;
+            `⚠️ Нет сети\n#${window.fox_number}\n${win ? '🎉 ПОБЕДА' : '💀 ПОЙМАН'}\n${duration.toFixed(1)}с`;
     }
 
     finished = win || (!win && attempt >= maxAttempts);
